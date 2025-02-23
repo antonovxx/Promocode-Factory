@@ -187,7 +187,7 @@ public class PartnerControllerTests
         var result = await _partnersController.GetPartnerLimitAsync(partnerId, limitId);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
         _partnersRepositoryMock.Verify(repo => repo.GetByIdAsync(partnerId), Times.Once);
     }
     
