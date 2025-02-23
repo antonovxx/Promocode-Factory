@@ -20,13 +20,13 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies for UnitTests solution
-        run: dotnet restore UnitTests/src/PromoCodeFactory.UnitTests.sln
+        run: dotnet restore UnitTests/src/PromoCodeFactory.sln
 
       - name: Build UnitTests solution
-        run: dotnet build UnitTests/src/PromoCodeFactory.UnitTests.sln --configuration Release --no-restore
+        run: dotnet build UnitTests/src/PromoCodeFactory.sln --configuration Release --no-restore
 
       - name: Run tests for UnitTests solution
-        run: dotnet test UnitTests/src/PromoCodeFactory.UnitTests.sln --configuration Release --no-build
+        run: dotnet test UnitTests/src/PromoCodeFactory.sln --configuration Release --no-build
 
       - name: Publish app
         run: dotnet publish PromoCodeFactory.WebHost/PromoCodeFactory.WebHost.csproj -c Release -o ./publish
