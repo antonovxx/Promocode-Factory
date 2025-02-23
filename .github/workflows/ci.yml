@@ -55,7 +55,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish app
-        run: dotnet publish PromoCodeFactory.WebHost/PromoCodeFactory.WebHost.csproj -c Release -o ./publish
+        run: dotnet publish UnitTests/src/PromoCodeFactory.WebHost/PromoCodeFactory.WebHost.csproj -c Release -o ./publish
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
