@@ -9,9 +9,11 @@ services:
     environment: 
       - POSTGRES_PASSWORD=docker
 
-  #Administration Api
+#Administration Api
   promocode-factory-administration-api:
-    build: src/Pcf.Administration/
+    build: 
+      context: src/Pcf.Administration/
+      target: webhost-runtime
     container_name: 'promocode-factory-administration-api'
     restart: always
     ports:
@@ -21,6 +23,41 @@ services:
     depends_on: 
       - promocode-factory-administration-db
 
+#Administration RmqHost
+  promocode-factory-administration-rmqhost:
+    build: 
+      context: src/Pcf.Administration/
+      target: rmqhost-runtime
+    container_name: 'promocode-factory-administration-rmqhost'
+    restart: always
+    environment:
+      - "ConnectionStrings:PromocodeFactoryAdministrationDb=Host=promocode-factory-administration-db;Database=promocode_factory_administration_db;Username=postgres;Password=docker"
+      - "RabbitMqPromoCodeConsumer:HostName=promocode-factory-rabbitmq"
+      - "RabbitMqPromoCodeConsumer:Port=5672"
+      - "RabbitMqPromoCodeConsumer:UserName=guest"
+      - "RabbitMqPromoCodeConsumer:Password=guest"
+    depends_on: 
+      promocode-factory-administration-db:
+        condition: service_started
+      promocode-factory-rabbitmq:
+        condition: service_healthy
+
+  #RabbitMQ
+  promocode-factory-rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: 'promocode-factory-rabbitmq'
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   #ReceivingFromPartner Db
   promocode-factory-receiving-from-partner-db:
@@ -41,10 +78,17 @@ services:
       - "8092:8080"
     environment:
       - "ConnectionStrings:PromocodeFactoryReceivingFromPartnerDb=Host=promocode-factory-receiving-from-partner-db;Database=promocode_factory_receiving_from_partner_db;Username=postgres;Password=docker"
-      - "IntegrationSettings:GivingToCustomerApiUrl=http://promocode-factory-giving-to-customer-api"    
-      - "IntegrationSettings:AdministrationApiUrl=http://promocode-factory-administration-api"       
+      - "IntegrationSettings:GivingToCustomerApiUrl=http://promocode-factory-giving-to-customer-api:8080"    
+      - "IntegrationSettings:AdministrationApiUrl=http://promocode-factory-administration-api:8080"  
+      - "RabbitMqPromoCodeProducer:HostName=promocode-factory-rabbitmq"
+      - "RabbitMqPromoCodeProducer:Port=5672"
+      - "RabbitMqPromoCodeProducer:UserName=guest"
+      - "RabbitMqPromoCodeProducer:Password=guest"     
     depends_on: 
       - promocode-factory-receiving-from-partner-db
+      - promocode-factory-rabbitmq
+      - promocode-factory-giving-to-customer-api
+      - promocode-factory-administration-api
   
   #GivingToCustomer Db
   promocode-factory-giving-to-customer-db:

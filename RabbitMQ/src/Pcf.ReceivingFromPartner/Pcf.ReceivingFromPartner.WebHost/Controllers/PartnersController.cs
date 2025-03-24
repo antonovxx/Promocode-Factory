@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using Pcf.ReceivingFromPartner.Core.Abstractions.Repositories;
 using Pcf.ReceivingFromPartner.Core.Domain;
 using Pcf.ReceivingFromPartner.Core.Abstractions.Gateways;
+using Pcf.ReceivingFromPartner.Integration.Consts;
+using Pcf.ReceivingFromPartner.Integration.Dto.Sync;
+using Pcf.ReceivingFromPartner.Integration.RabbitMq.Producer;
 using Pcf.ReceivingFromPartner.WebHost.Models;
 using Pcf.ReceivingFromPartner.WebHost.Mappers;
 
@@ -16,27 +19,21 @@ namespace Pcf.ReceivingFromPartner.WebHost.Controllers
     /// </summary>
     [ApiController]
     [Route("api/v1/[controller]")]
-    public class PartnersController
+    public class PartnersController(
+        IRepository<Partner> partnersRepository,
+        IRepository<Preference> preferencesRepository,
+        INotificationGateway notificationGateway,
+        IGivingPromoCodeToCustomerGateway givingPromoCodeToCustomerGateway,
+        IAdministrationGateway administrationGateway,
+        IRabbitMqProducer<PromoCodeSyncDto> rabbitMqProducer)
         : ControllerBase
     {
-        private readonly IRepository<Partner> _partnersRepository;
-        private readonly IRepository<Preference> _preferencesRepository;
-        private readonly INotificationGateway _notificationGateway;
-        private readonly IGivingPromoCodeToCustomerGateway _givingPromoCodeToCustomerGateway;
-        private readonly IAdministrationGateway _administrationGateway;
-
-        public PartnersController(IRepository<Partner> partnersRepository,
-            IRepository<Preference> preferencesRepository,
-            INotificationGateway notificationGateway,
-            IGivingPromoCodeToCustomerGateway givingPromoCodeToCustomerGateway,
-            IAdministrationGateway administrationGateway)
-        {
-            _partnersRepository = partnersRepository;
-            _preferencesRepository = preferencesRepository;
-            _notificationGateway = notificationGateway;
-            _givingPromoCodeToCustomerGateway = givingPromoCodeToCustomerGateway;
-            _administrationGateway = administrationGateway;
-        }
+        private readonly IRepository<Partner> _partnersRepository = partnersRepository;
+        private readonly IRepository<Preference> _preferencesRepository = preferencesRepository;
+        private readonly INotificationGateway _notificationGateway = notificationGateway;
+        private readonly IGivingPromoCodeToCustomerGateway _givingPromoCodeToCustomerGateway = givingPromoCodeToCustomerGateway;
+        private readonly IAdministrationGateway _administrationGateway = administrationGateway;
+        private readonly IRabbitMqProducer<PromoCodeSyncDto> _rabbitMqProducer = rabbitMqProducer;
 
         /// <summary>
         /// Получить список партнеров
@@ -339,7 +336,12 @@ namespace Pcf.ReceivingFromPartner.WebHost.Controllers
 
             if (request.PartnerManagerId.HasValue)
             {
-                await _administrationGateway.NotifyAdminAboutPartnerManagerPromoCode(request.PartnerManagerId.Value);
+                // await _administrationGateway.NotifyAdminAboutPartnerManagerPromoCode(request.PartnerManagerId.Value);
+
+                await _rabbitMqProducer.PublishAsync(RoutingKeys.GivePromoCodeFromPartner, new PromoCodeSyncDto
+                {
+                    PartnerManagerId = request.PartnerManagerId.Value,
+                });
             }
 
             return CreatedAtAction(nameof(GetPartnerPromoCodeAsync),

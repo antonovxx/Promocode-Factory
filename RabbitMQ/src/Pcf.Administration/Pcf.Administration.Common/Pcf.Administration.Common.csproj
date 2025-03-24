@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="6.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+        <PackageReference Include="RabbitMQ.Client" Version="7.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="SyncServices\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Pcf.Administration.Core\Pcf.Administration.Core.csproj" />
+    </ItemGroup>
+
+
+</Project>
