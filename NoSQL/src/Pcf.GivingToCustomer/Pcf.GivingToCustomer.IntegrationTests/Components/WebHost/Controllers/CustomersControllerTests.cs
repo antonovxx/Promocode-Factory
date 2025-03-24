@@ -3,10 +3,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Moq;
 using Pcf.GivingToCustomer.Core.Domain;
 using Pcf.GivingToCustomer.DataAccess.Repositories;
+using Pcf.GivingToCustomer.DataAccess.Services;
+using Pcf.GivingToCustomer.Integration.Clients;
 using Pcf.GivingToCustomer.WebHost.Controllers;
 using Pcf.GivingToCustomer.WebHost.Models;
+using Pcf.GivingToCustomer.WebHost.Services;
+using Pcf.GivingToCustomer.WebHost.Services.Impl;
 using Xunit;
 
 namespace Pcf.GivingToCustomer.IntegrationTests.Components.WebHost.Controllers
@@ -16,16 +22,29 @@ namespace Pcf.GivingToCustomer.IntegrationTests.Components.WebHost.Controllers
     {
         private readonly CustomersController _customersController;
         private readonly EfRepository<Customer> _customerRepository;
-        private readonly EfRepository<Preference> _preferenceRepository;
+        private readonly PreferenceService _preferenceService;
+        private readonly IPreferenceSyncService _preferenceSyncService;
         
         public CustomersControllerTests(EfDatabaseFixture efDatabaseFixture)
         {
             _customerRepository = new EfRepository<Customer>(efDatabaseFixture.DbContext);
-            _preferenceRepository = new EfRepository<Preference>(efDatabaseFixture.DbContext);
+            
+            var dictionaryClientMock = new Mock<IDictionaryClient>();
+            
+            dictionaryClientMock.Setup(client => client.GetPreferencesAsync())
+                .ReturnsAsync([new Preference() { Id = Guid.Parse("ef7f299f-92d7-459f-896e-078ed53ef99c"), Name = "Театр" }]);
+            
+            var memoryCacheMock = new Mock<IMemoryCache>();
+            memoryCacheMock.Setup(cache => cache.TryGetValue(It.IsAny<object>(), out It.Ref<object>.IsAny))
+                .Returns(false);
+            
+            _preferenceService = new PreferenceService(dictionaryClientMock.Object, memoryCacheMock.Object);
+            _preferenceSyncService = new PreferenceSyncService(efDatabaseFixture.DbContext);
             
             _customersController = new CustomersController(
                 _customerRepository, 
-                _preferenceRepository);
+                _preferenceService,
+                _preferenceSyncService);
         }
         
         [Fact]
@@ -33,7 +52,7 @@ namespace Pcf.GivingToCustomer.IntegrationTests.Components.WebHost.Controllers
         {
             //Arrange 
             var preferenceId = Guid.Parse("ef7f299f-92d7-459f-896e-078ed53ef99c");
-            var request = new CreateOrEditCustomerRequest()
+            var request = new CreateOrEditCustomerRequest
             {
                 Email = "some@mail.ru",
                 FirstName = "Иван",

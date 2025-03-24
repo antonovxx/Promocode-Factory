@@ -1,21 +1,19 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Castle.Core.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
 using Pcf.ReceivingFromPartner.Core.Abstractions.Gateways;
 using Pcf.ReceivingFromPartner.Core.Abstractions.Repositories;
 using Pcf.ReceivingFromPartner.DataAccess;
 using Pcf.ReceivingFromPartner.DataAccess.Data;
 using Pcf.ReceivingFromPartner.DataAccess.Repositories;
+using Pcf.ReceivingFromPartner.DataAccess.Services;
 using Pcf.ReceivingFromPartner.Integration;
+using Pcf.ReceivingFromPartner.Integration.Clients;
+using Pcf.ReceivingFromPartner.Integration.Clients.Impl;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 
 namespace Pcf.ReceivingFromPartner.WebHost
@@ -38,6 +36,9 @@ namespace Pcf.ReceivingFromPartner.WebHost
             services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
             services.AddScoped<INotificationGateway, NotificationGateway>();
             services.AddScoped<IDbInitializer, EfDbInitializer>();
+            services.AddScoped<PreferenceService>();
+            
+            services.AddMemoryCache();
 
             services.AddHttpClient<IGivingPromoCodeToCustomerGateway,GivingPromoCodeToCustomerGateway>(c =>
             {
@@ -47,6 +48,11 @@ namespace Pcf.ReceivingFromPartner.WebHost
             services.AddHttpClient<IAdministrationGateway,AdministrationGateway>(c =>
             {
                 c.BaseAddress = new Uri(Configuration["IntegrationSettings:AdministrationApiUrl"]);
+            });
+            
+            services.AddHttpClient<IDictionaryClient, DictionaryClient>(client =>
+            {
+                client.BaseAddress = new Uri(Configuration["IntegrationSettings:DictionaryApiUrl"]);
             });
             
             services.AddDbContext<DataContext>(x =>

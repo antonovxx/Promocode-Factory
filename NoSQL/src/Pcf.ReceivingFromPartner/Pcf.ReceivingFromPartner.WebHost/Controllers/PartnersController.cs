@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
  using Pcf.ReceivingFromPartner.Core.Abstractions.Gateways;
  using Pcf.ReceivingFromPartner.Core.Abstractions.Repositories;
  using Pcf.ReceivingFromPartner.Core.Domain;
+ using Pcf.ReceivingFromPartner.DataAccess.Services;
+ using Pcf.ReceivingFromPartner.Integration.Clients;
  using Pcf.ReceivingFromPartner.WebHost.Mappers;
 
  namespace Pcf.ReceivingFromPartner.WebHost.Controllers
@@ -16,27 +18,19 @@ using Microsoft.AspNetCore.Mvc;
     /// </summary>
     [ApiController]
     [Route("api/v1/[controller]")]
-    public class PartnersController
+    public class PartnersController(
+        IRepository<Partner> partnersRepository,
+        INotificationGateway notificationGateway,
+        IGivingPromoCodeToCustomerGateway givingPromoCodeToCustomerGateway,
+        IAdministrationGateway administrationGateway,
+        PreferenceService preferenceService)
         : ControllerBase
     {
-        private readonly IRepository<Partner> _partnersRepository;
-        private readonly IRepository<Preference> _preferencesRepository;
-        private readonly INotificationGateway _notificationGateway;
-        private readonly IGivingPromoCodeToCustomerGateway _givingPromoCodeToCustomerGateway;
-        private readonly IAdministrationGateway _administrationGateway;
-
-        public PartnersController(IRepository<Partner> partnersRepository,
-            IRepository<Preference> preferencesRepository, 
-            INotificationGateway notificationGateway,
-            IGivingPromoCodeToCustomerGateway givingPromoCodeToCustomerGateway,
-            IAdministrationGateway administrationGateway)
-        {
-            _partnersRepository = partnersRepository;
-            _preferencesRepository = preferencesRepository;
-            _notificationGateway = notificationGateway;
-            _givingPromoCodeToCustomerGateway = givingPromoCodeToCustomerGateway;
-            _administrationGateway = administrationGateway;
-        }
+        private readonly IRepository<Partner> _partnersRepository = partnersRepository;
+        private readonly PreferenceService _preferenceService = preferenceService;
+        private readonly INotificationGateway _notificationGateway = notificationGateway;
+        private readonly IGivingPromoCodeToCustomerGateway _givingPromoCodeToCustomerGateway = givingPromoCodeToCustomerGateway;
+        private readonly IAdministrationGateway _administrationGateway = administrationGateway;
 
         /// <summary>
         /// Получить список партнеров
@@ -317,14 +311,16 @@ using Microsoft.AspNetCore.Mvc;
             }
 
             //Получаем предпочтение по имени
-            var preference = await _preferencesRepository.GetByIdAsync(request.PreferenceId);
+            var preferences = await _preferenceService.GetPreferencesAsync();
+            
+            var preference = preferences.FirstOrDefault(x => x.Id == request.PreferenceId);
 
             if (preference == null)
             {
                 return BadRequest("Предпочтение не найдено");
             }
 
-            PromoCode promoCode = PromoCodeMapper.MapFromModel(request, preference, partner);
+            var promoCode = PromoCodeMapper.MapFromModel(request, preference, partner);
             partner.PromoCodes.Add(promoCode);
             partner.NumberIssuedPromoCodes++;
 
