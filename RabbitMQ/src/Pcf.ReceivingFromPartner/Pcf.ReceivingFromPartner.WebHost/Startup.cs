@@ -12,6 +12,8 @@ using Pcf.ReceivingFromPartner.DataAccess;
 using Pcf.ReceivingFromPartner.DataAccess.Repositories;
 using Pcf.ReceivingFromPartner.DataAccess.Data;
 using Pcf.ReceivingFromPartner.Integration;
+using Pcf.ReceivingFromPartner.Integration.Dto.Sync;
+using Pcf.ReceivingFromPartner.Integration.RabbitMq.Producer.Extensions;
 
 namespace Pcf.ReceivingFromPartner.WebHost
 {
@@ -51,6 +53,8 @@ namespace Pcf.ReceivingFromPartner.WebHost
                 x.UseSnakeCaseNamingConvention();
                 x.UseLazyLoadingProxies();
             });
+            
+            services.AddProducer<PromoCodeSyncDto>(Configuration.GetRequiredSection("RabbitMqPromoCodeProducer").Bind);
 
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
