@@ -15,7 +15,12 @@ using Pcf.GivingToCustomer.Core.Abstractions.Repositories;
 using Pcf.GivingToCustomer.DataAccess;
 using Pcf.GivingToCustomer.DataAccess.Data;
 using Pcf.GivingToCustomer.DataAccess.Repositories;
+using Pcf.GivingToCustomer.DataAccess.Services;
 using Pcf.GivingToCustomer.Integration;
+using Pcf.GivingToCustomer.Integration.Clients;
+using Pcf.GivingToCustomer.Integration.Clients.Impl;
+using Pcf.GivingToCustomer.WebHost.Services;
+using Pcf.GivingToCustomer.WebHost.Services.Impl;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 
 namespace Pcf.GivingToCustomer.WebHost
@@ -38,12 +43,22 @@ namespace Pcf.GivingToCustomer.WebHost
             services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
             services.AddScoped<INotificationGateway, NotificationGateway>();
             services.AddScoped<IDbInitializer, EfDbInitializer>();
+            services.AddScoped<PreferenceService>();
+            services.AddScoped<IPreferenceSyncService, PreferenceSyncService>();
+            
+            services.AddMemoryCache();
+            
             services.AddDbContext<DataContext>(x =>
             {
                 //x.UseSqlite("Filename=PromocodeFactoryGivingToCustomerDb.sqlite");
                 x.UseNpgsql(Configuration.GetConnectionString("PromocodeFactoryGivingToCustomerDb"));
                 x.UseSnakeCaseNamingConvention();
                 x.UseLazyLoadingProxies();
+            });
+            
+            services.AddHttpClient<IDictionaryClient, DictionaryClient>(client =>
+            {
+                client.BaseAddress = new Uri(Configuration["IntegrationSettings:DictionaryApiUrl"]);
             });
 
             services.AddOpenApiDocument(options =>
